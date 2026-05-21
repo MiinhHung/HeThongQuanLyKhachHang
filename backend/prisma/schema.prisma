@@ -1,0 +1,64 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id            String         @id @default(uuid())
+  username      String         @unique
+  email         String         @unique
+  password      String         // Hashed password
+  fullName      String
+  avatarUrl     String?
+  role          String         @default("STAFF") // ADMIN, STAFF
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  attachments   Attachment[]   @relation("UploadedBy")
+  notifications Notification[] @relation("Recipient")
+}
+
+model Customer {
+  id          String       @id @default(uuid())
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  name        String       // Họ và tên / Tên đối tác
+  company     String?      // Công ty
+  industry    String?      // Lĩnh vực
+  price       Decimal      @default(0) // Giá trị hợp đồng / giao dịch dự kiến
+  status      String       @default("NEW") // NEW (Mới nhận), CONSULTING (Đang tư vấn), QUOTED (Đã gửi báo giá), SIGNED (Đã ký hợp đồng), REJECTED (Khách từ chối)
+  email       String       @unique // Kiểm tra chống trùng
+  phone       String       @unique // Kiểm tra chống trùng
+  location    String?      // Địa chỉ / Địa điểm
+  source      String?      // Nguồn khách hàng (Facebook Ads, Website, Khách tự tìm, Người quen giới thiệu...)
+  appointment DateTime?    // Lịch hẹn
+  description String?      // Ghi chú ban đầu
+  attachments Attachment[]
+}
+
+model Attachment {
+  id         String   @id @default(uuid())
+  name       String   // Tên file gốc
+  url        String   // Link file trên Supabase Storage
+  size       Int?     // Kích thước file (bytes)
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  userId     String
+  uploadedBy User     @relation("UploadedBy", fields: [userId], references: [id])
+  createdAt  DateTime @default(now())
+}
+
+model Notification {
+  id         String   @id @default(uuid())
+  title      String
+  content    String
+  type       String   @default("TAG") // TAG, CHAT, SYSTEM
+  customerId String?
+  isRead     Boolean  @default(false)
+  userId     String
+  recipient  User     @relation("Recipient", fields: [userId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+}
